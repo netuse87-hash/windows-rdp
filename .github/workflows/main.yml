@@ -7,47 +7,22 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Initialize RDP and Ngrok
+      - name: Initialize RDP and Free Tunnel
         shell: powershell
         run: |
-          # 1. Enable RDP & User
+          # 1. Enable RDP & Configure User
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
           cmd /c "net user runneradmin Tally@12345678 /add /y"
           cmd /c "net localgroup administrators runneradmin /add"
 
-          # 2. Download & Configure Ngrok
-          Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-          Expand-Archive -Path "ngrok.zip" -DestinationPath "C:\ngrok" -Force
-          C:\ngrok\ngrok.exe config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-
-          # 3. Start Tunnel
-          Start-Process -FilePath "C:\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
-
-          # 4. Fetch IP with Retry Loop
-          $publicUrl = ""
-          for ($attempt = 1; $attempt -le 10; $attempt++) {
-              Start-Sleep -Seconds 3
-              try {
-                  $response = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels" -ErrorAction Stop
-                  if ($response.tunnels -and $response.tunnels.Count -gt 0) {
-                      $publicUrl = $response.tunnels[0].public_url -replace 'tcp://', ''
-                      break
-                  }
-              } catch {
-                  Write-Host "Waiting for Ngrok tunnel initialization (Attempt $attempt)..."
-              }
-          }
-
+          # 2. Download and Run Pinggy (100% Free TCP Tunnel)
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nd-phuc/windows-rdp/main/pinggy.bat" -OutFile "pinggy.bat"
+          
           Write-Host "=========================================="
-          Write-Host "CONNECT TO THIS IP IN RD CLIENT: $publicUrl"
-          Write-Host "Username: runneradmin"
-          Write-Host "Password: Tally@12345678"
+          Write-Host "STARTING FREE TCP TUNNEL..."
           Write-Host "=========================================="
-
-          # 5. Keep Session Alive
-          for ($i = 0; $i -lt 360; $i++) {
-              Start-Sleep -Seconds 60
-              Write-Host "Heartbeat: VM running for $i minutes..."
-          }
+          
+          # Start SSH tunnel to Pinggy on port 3389
+          cmd /c "ssh -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 tcp@free.pinggy.io"
