@@ -7,22 +7,23 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Initialize RDP and Free Tunnel
+      - name: Start Windows RDP with Pinggy
         shell: powershell
         run: |
-          # 1. Enable RDP & Configure User
+          # 1. Enable RDP
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
+
+          # 2. Setup runneradmin credentials
           cmd /c "net user runneradmin Tally@12345678 /add /y"
           cmd /c "net localgroup administrators runneradmin /add"
 
-          # 2. Download and Run Pinggy (100% Free TCP Tunnel)
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nd-phuc/windows-rdp/main/pinggy.bat" -OutFile "pinggy.bat"
-          
+          # 3. Launch Pinggy TCP tunnel directly
           Write-Host "=========================================="
-          Write-Host "STARTING FREE TCP TUNNEL..."
+          Write-Host "INITIALIZING CONNECTION..."
+          Write-Host "Username: runneradmin"
+          Write-Host "Password: Tally@12345678"
           Write-Host "=========================================="
-          
-          # Start SSH tunnel to Pinggy on port 3389
-          cmd /c "ssh -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 tcp@free.pinggy.io"
+
+          ssh -o StrictHostKeyChecking=no -p 443 -R0:localhost:3389 -N tcp@free.pinggy.io
