@@ -19,5 +19,5 @@ jobs:
           cmd /c "net user runneradmin Tally@12345678 /add /y"
           cmd /c "net localgroup administrators runneradmin /add"
 
-          # 3. Launch Pinggy TCP tunnel with visible output
-          ssh -o StrictHostKeyChecking=no -p 443 -R0:localhost:3389 tcp@free.pinggy.io
+          # 3. Force pseudo-terminal so Pinggy outputs the live URL
+          ssh -tt -o StrictHostKeyChecking=no -p 443 -R0:localhost:3389 tcp@free.pinggy.io
